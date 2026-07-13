@@ -1,0 +1,2 @@
+1/As a Security Analyst, I want to scan configuration files against security policies so that I can
+quickly identify insecure configurations and generate a compliance report.
