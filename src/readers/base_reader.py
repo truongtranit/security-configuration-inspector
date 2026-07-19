@@ -17,4 +17,4 @@ class BaseReader(ABC):
         Raises:
             ReaderError: If any read operation fails.
         """
-        pass
+        ...
