@@ -29,6 +29,8 @@ class FileReader(BaseReader):
         
         try:
             path: Path = Path(resource)
+            if path.is_dir():
+                raise ResourceInvalidError(resource=path, operation="read")
             return path.read_bytes()
             
         except FileNotFoundError as e:

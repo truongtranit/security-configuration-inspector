@@ -21,11 +21,22 @@ def test_read_returns_raw_bytes_for_valid_file():
 
 def test_read_raises_resource_not_found_for_missing_file():
     reader = FileReader()
-    resource = Path("tests/resources/non_existent_file.txt")
+    resource = "tests/resources/non_existent_file.txt"
     
     with pytest.raises(ResourceNotFoundError) as exc_info:
         reader.read(resource)
 
     assert exc_info.value.resource == resource
     assert exc_info.value.operation == "read"
+
+def test_read_raises_resource_invalid_for_directory():
+    reader = FileReader()
+    resource = "tests/resources/folder"  # This should be a directory, not a file
+
+    with pytest.raises(ResourceInvalidError) as exc_info:
+        reader.read(resource)
+
+    assert exc_info.value.resource == resource
+    assert exc_info.value.operation == "read"
+
 
