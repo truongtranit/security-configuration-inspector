@@ -42,25 +42,27 @@ The system processes data linearly through decoupled components:
 flowchart LR
 
     A["Configuration Resource"]
-    --> B["Reader"]
+        --> B["Reader"]
 
     B --> C["Raw Bytes"]
 
-    C --> D["Parser"]
+    C --> D["ParserFactory"]
 
-    D --> E["Python Object"]
+    D --> E["Concrete Parser"]
 
-    E --> F["Normalizer"]
+    E --> F["Python Object"]
 
-    F --> G["Canonical Model"]
+    F --> G["Normalizer"]
 
-    G --> H["Security Validator"]
+    G --> H["Canonical Model"]
 
-    H --> I["Validation Result"]
+    H --> I["Security Validator"]
 
-    I --> J["Report Generator"]
+    I --> J["Validation Result"]
 
-    J --> K["HTML / JSON Report"]
+    J --> K["Report Generator"]
+
+    K --> L["HTML / JSON Report"]
 ```
 
 ---
@@ -72,42 +74,145 @@ sequenceDiagram
 
     actor User
 
-    participant App
+    participant Main
     participant Reader
+    participant ParserFactory
     participant Parser
+    participant Normalizer
     participant Validator
     participant Reporter
 
-    User->>App: Scan Configuration
+    User->>Main: Scan()
 
-    App->>Reader: read(resource)
+    Main->>Reader: read(resource)
 
-    Reader-->>App: bytes
+    Reader-->>Main: bytes
 
-    App->>Parser: parse(bytes)
+    Main->>ParserFactory: get_parser(resource)
 
-    Parser-->>App: dict
+    ParserFactory-->>Main: JsonParser
 
-    App->>Validator: validate(dict)
+    Main->>Parser: parse(bytes)
 
-    Validator-->>App: ValidationResult
+    Parser-->>Main: dict
 
-    App->>Reporter: generate()
+    Main->>Normalizer: normalize(dict)
 
-    Reporter-->>User: HTML Report
+    Normalizer-->>Main: canonical_dict
+
+    Main->>Validator: validate(canonical_dict)
+
+    Validator-->>Main: ValidationResult
+
+    Main->>Reporter: generate(result)
+
+    Reporter-->>Main: HTML Report
+
+    Main-->>User: Display Report
 ```
 
 ---
 
 # Features
 
+## Current Features
+
+- Binary-safe file ingestion
+- JSON configuration parsing
+- Extensible parser selection via `ParserFactory`
+- Dynamic parser registration
+- Comprehensive custom exception hierarchy
+- Unit-tested architecture
+- Clean Architecture inspired component boundaries
+
+## Planned Features
+
+- YAML support
+- Configuration normalization
+- Security policy engine
+- HTML report generation
+- JSON/CSV report export
+- REST API integration
+
 ---
 
 # Installation
 
+Clone the repository:
+
+```bash
+git clone https://github.com/<username>/SecurityConfigInspector.git
+
+cd SecurityConfigInspector
+```
+
+Create a virtual environment:
+
+```bash
+python -m venv .venv
+```
+
+Activate it.
+
+Windows
+
+```bash
+.venv\Scripts\activate
+```
+
+Linux/macOS
+
+```bash
+source .venv/bin/activate
+```
+
+Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+Run tests
+
+```bash
+python -m pytest
+```
+
 ---
 
 # Usage
+
+The command-line interface is currently under development.
+
+At this stage, components can be exercised independently through unit tests:
+
+```bash
+python -m pytest
+```
+
+Future releases will support:
+
+```bash
+python main.py config.json
+```
+
+---
+
+# Development Progress
+
+| Component | Status |
+|-----------|:------:|
+| Project Setup | ✅ |
+| BaseReader | ✅ |
+| FileReader | ✅ |
+| BaseParser | ✅ |
+| JsonParser | ✅ |
+| ParserFactory | ✅ |
+| Unit Tests | ✅ |
+| ConfigNormalizer | ⏳ |
+| SecurityValidator | ⏳ |
+| ReportGenerator | ⏳ |
+| CLI | ⏳ |
 
 ---
 
@@ -147,9 +252,81 @@ Credentials must come from environment variables or configuration files.
 
 # Project Structure
 
+```
+SecurityConfigInspector/
+
+├── docs/
+│   ├── architecture.md
+│   ├── developer-guide.md
+│   ├── testing_strategy.md
+│   └── adr/
+│
+├── src/
+│   ├── readers/
+│   ├── parsers/
+│   ├── factories/
+│   ├── exceptions/
+│   └── ...
+│
+├── tests/
+│   ├── readers/
+│   ├── parsers/
+│   └── factories/
+│
+├── requirements.txt
+├── pyproject.toml
+└── README.md
+```
+
 ---
 
 # Documentation
+
+The project documentation includes:
+
+- Architecture Overview
+- Processing Pipeline
+- Sequence Diagrams
+- Architecture Decision Records (ADRs)
+- Developer Guide
+- Testing Strategy
+- Learning Journal
+
+---
+
+# Engineering Principles
+
+This project is intentionally designed as a portfolio-quality software engineering project.
+
+Key principles include:
+
+- SOLID principles
+- Separation of Concerns
+- Clean Architecture
+- Dependency Inversion
+- Domain-specific exception hierarchy
+- Test-driven thinking
+- Extensible component design
+
+---
+
+# Testing
+
+The project emphasizes contract-driven unit testing.
+
+Current coverage includes:
+
+- FileReader
+- JsonParser
+- ParserFactory
+
+Tests verify:
+
+- Happy paths
+- Boundary conditions
+- Exception translation
+- Public API contracts
+- Dynamic parser registration
 
 ---
 

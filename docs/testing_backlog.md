@@ -1,35 +1,89 @@
 # Testing Backlog
 
-## FileReader
+This document tracks the planned and deferred test cases for each project component. Test cases are organized by component and priority to support incremental development and test-driven design.
 
-| ID | Priority | Test | Status | Reason |
-|----|----------|------|--------|--------|
-| T-005 | Medium | Permission denied | Backlog | Waiting to learn mocking |
-| T-006 | Medium | Unexpected I/O failure | Backlog | Waiting to learn mocking |
+---
 
-## JsonParser
+# FileReader
 
-| ID | Priority | Test | Status | Reason |
-|----|----------|------|--------|--------|
-| T-007 | High | Invalid UTF-8 | Backlog | Parser not implemented |
-| T-008 | High | Malformed JSON | Backlog | Parser not implemented |
+## Active Test Cases
 
-|     ID    | Priority | Behavior                                               | Expected Result                                         |    Status   | Notes                                       |
-| :-------: | :------: | ------------------------------------------------------ | ------------------------------------------------------- | :---------: | ------------------------------------------- |
-| **P-001** |   High   | Parse a valid JSON object                              | Returns the corresponding Python `dict`                 |  ⬜ Planned  | Happy path                                  |
-| **P-002** |   High   | Parse a valid JSON array                               | Returns the corresponding Python `list`                 |  ⬜ Planned  | Confirms parser accepts any valid JSON root |
-| **P-003** |   High   | Parse an empty JSON object (`{}`)                      | Returns an empty `dict`                                 |  ⬜ Planned  | Edge case                                   |
-| **P-004** |   High   | Parse an empty JSON array (`[]`)                       | Returns an empty `list`                                 |  ⬜ Planned  | Edge case                                   |
-| **P-005** |   High   | Invalid UTF-8 byte stream                              | Raises `EncodingError`                                  |  ⬜ Planned  | Exception translation                       |
-| **P-006** |   High   | Malformed JSON syntax                                  | Raises `JSONSyntaxError`                                |  ⬜ Planned  | Exception translation                       |
-| **P-007** |  Medium  | Non-bytes input                                        | Raises `TypeError` (or `ParserError`, depending on API) |  ⬜ Planned  | Validate public contract                    |
-| **P-008** |  Medium  | Parse JSON primitive (`true`, `42`, `"hello"`, `null`) | Returns equivalent Python value                         | 📌 Deferred | Decide if parser supports all JSON roots    |
-| **P-009** |    Low   | Extremely large JSON document                          | Successfully parses without errors                      |  📌 Backlog | Performance / stress testing                |
-| **P-010** |    Low   | Deeply nested JSON                                     | Parses correctly or fails gracefully                    |  📌 Backlog | Stress testing                              |
-| **P-011** |    Low   | Unexpected parser failure                              | Raises `ParserError`                                    |  📌 Backlog | Requires mocking                            |
+|   ID  | Priority | Behavior            | Expected Result                                   |   Status   |
+| :---: | :------: | ------------------- | ------------------------------------------------- | :--------: |
+| R-001 |   High   | Read existing file  | Returns file contents as `bytes`                  | ✅ Complete |
+| R-002 |   High   | File does not exist | Raises `FileNotFoundError` (or project exception) | ✅ Complete |
+| R-003 |   High   | Path is a directory | Raises project exception                          | ✅ Complete |
+| R-004 |   High   | Empty file          | Returns `b""`                                     | ✅ Complete |
 
+## Deferred Tests
 
-| ID        | Behavior                | Why it exists                                                     |
-| --------- | ----------------------- | ----------------------------------------------------------------- |
-| **P-003** | Parse empty JSON object | Verify object structural boundary and preserve empty dictionaries |
-| **P-004** | Parse empty JSON array  | Verify array structural boundary and preserve empty lists         |
+|   ID  | Priority | Behavior               | Expected Result          |    Status   | Notes            |
+| :---: | :------: | ---------------------- | ------------------------ | :---------: | ---------------- |
+| R-005 |  Medium  | Permission denied      | Raises project exception | 📌 Deferred | Requires mocking |
+| R-006 |  Medium  | Unexpected I/O failure | Raises project exception | 📌 Deferred | Requires mocking |
+
+---
+
+# JsonParser
+
+## Active Test Cases
+
+|   ID  | Priority | Behavior                       | Expected Result          |   Status   | Notes                 |
+| :---: | :------: | ------------------------------ | ------------------------ | :--------: | --------------------- |
+| P-001 |   High   | Parse valid JSON object        | Returns Python `dict`    | ✅ Complete | Happy path            |
+| P-002 |   High   | Parse valid JSON array         | Returns Python `list`    | ✅ Complete | Supports array root   |
+| P-003 |   High   | Parse empty JSON object (`{}`) | Returns empty `dict`     | ✅ Complete | Structural boundary   |
+| P-004 |   High   | Parse empty JSON array (`[]`)  | Returns empty `list`     | ✅ Complete | Structural boundary   |
+| P-005 |   High   | Invalid UTF-8 byte stream      | Raises `EncodingError`   | ✅ Complete | Exception translation |
+| P-006 |   High   | Malformed JSON syntax          | Raises `JSONSyntaxError` | ✅ Complete | Exception translation |
+| P-007 |  Medium  | Non-bytes input                | Raises `TypeError`       | ✅ Complete | Public API contract   |
+
+## Deferred Tests
+
+|   ID  | Priority | Behavior                                               | Expected Result                      |    Status   | Notes                                            |
+| :---: | :------: | ------------------------------------------------------ | ------------------------------------ | :---------: | ------------------------------------------------ |
+| P-008 |  Medium  | Parse JSON primitive (`true`, `42`, `"hello"`, `null`) | Returns equivalent Python value      | 📌 Deferred | Decide whether all JSON root types are supported |
+| P-009 |    Low   | Extremely large JSON document                          | Successfully parses                  |  📌 Backlog | Performance testing                              |
+| P-010 |    Low   | Deeply nested JSON                                     | Parses correctly or fails gracefully |  📌 Backlog | Stress testing                                   |
+| P-011 |    Low   | Unexpected parser failure                              | Raises `ParserError`                 |  📌 Backlog | Requires mocking                                 |
+
+---
+
+# ParserFactory
+
+## Active Test Cases
+
+|   ID  | Priority | Behavior                               | Expected Result                         |   Status    | Notes                   |
+| :---: | :------: | -------------------------------------- | --------------------------------------- | :-------:   | ----------------------- |
+| F-001 |   High   | JSON resource as `str`                 | Returns `JsonParser`                    | ✅ Complete | Happy path              |
+| F-002 |   High   | JSON resource as `Path`                | Returns `JsonParser`                    | ✅ Complete | Path input              |
+| F-003 |   High   | Uppercase extension (`CONFIG.JSON`)    | Returns `JsonParser`                    | ✅ Complete | Case-insensitive lookup |
+| F-004 |   High   | Unsupported extension                  | Raises `UnsupportedParserError`         | ✅ Complete | Exception translation   |
+| F-005 |   High   | Missing extension                      | Raises `FactoryError`                   | ✅ Complete | Invalid resource        |
+| F-006 |   High   | Invalid resource type                  | Raises `FactoryError`                   | ✅ Complete | Public API contract     |
+| F-007 |  Medium  | Register new parser                    | Returns registered parser               | ✅ Complete | Registry extensibility  |
+| F-008 |  Medium  | Register extension without leading `.` | Normalizes extension and returns parser | ✅ Complete | API convenience         |
+| F-009 |    Low   | Empty resource                         | Raises `FactoryError`                   | ✅ Complete | Input validation        |
+
+## Deferred Tests
+
+*None currently.*
+
+---
+
+## Next Component
+
+ConfigNormalizer
+
+Status: ⬜ Planned
+
+---
+
+## Status Legend
+
+|    Symbol   | Meaning                                                     |
+| :---------: | ----------------------------------------------------------- |
+| ⬜ Planned  | Test has been identified but not yet implemented            |
+| ✅ Complete | Test implemented and passing                                |
+| 📌 Deferred | Intentionally postponed until prerequisite work is complete |
+| 📌 Backlog | Future enhancement or lower-priority test                   |
