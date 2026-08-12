@@ -71,7 +71,27 @@ This document tracks the planned and deferred test cases for each project compon
 
 ---
 
-## Next Component
+# YamlParser
+
+## Active Test Cases
+
+|   ID  | Priority | Behavior                 | Expected Result                   |   Status   | Notes                            |
+| :---: | :------: | ------------------------ | --------------------------------- | :--------: | -------------------------------- |
+| Y-001 |   High   | Valid YAML mapping       | Returns `dict`                    | ✅ Complete | Happy path                       |
+| Y-002 |   High   | Valid YAML sequence      | Returns `list`                    | ✅ Complete | Supports sequence root           |
+| Y-003 |   High   | Empty YAML mapping `{}`  | Returns empty `dict`              | ✅ Complete | Structural boundary              |
+| Y-004 |   High   | Empty YAML sequence `[]` | Returns empty `list`              | ✅ Complete | Structural boundary              |
+| Y-005 |   High   | Invalid UTF-8            | Raises `EncodingError`            |  ✅ Complete | Exception translation            |
+| Y-006 |   High   | Malformed YAML           | Raises `YAMLSyntaxError`          |  ✅ Complete | Exception translation            |
+| Y-007 |  Medium  | Non-bytes input          | Raises `ParserError`              |  ✅ Complete | Follows existing parser contract |
+| Y-008 |  Medium  | Nested YAML structure    | Preserves nested Python structure |  ✅ Complete | Structural preservation          |
+| Y-009 |    Low   | Scalar YAML value        | Returns corresponding Python primitive   |  ✅ Complete | Contract decision made       |
+| Y-010 |    Low   | Empty YAML/comment-only     | Returns `None`   |  ✅ Complete | Contract decision made       |
+
+
+---
+
+# Next Component
 
 ConfigNormalizer
 
@@ -79,7 +99,7 @@ Status: ⬜ Planned
 
 ---
 
-## Status Legend
+# Status Legend
 
 |    Symbol   | Meaning                                                     |
 | :---------: | ----------------------------------------------------------- |

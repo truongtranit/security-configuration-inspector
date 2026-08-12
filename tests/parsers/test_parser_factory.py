@@ -1,8 +1,10 @@
 import pytest
 from pathlib import Path
+
 from src.parsers.parser_factory import ParserFactory
-from src.parsers.json_parser import JsonParser
 from src.parsers.base_parser import BaseParser
+from src.parsers.json_parser import JsonParser
+from src.parsers.yaml_parser import YamlParser
 from src.exceptions.factory_exceptions import FactoryError, UnsupportedParserError
 
 
@@ -158,3 +160,18 @@ def test_get_parser_raises_factory_error_for_invalid_resource_types(invalid_reso
     assert "Invalid resource type" in str(exception)
     assert type(invalid_resource_type).__name__ in str(exception )
     assert exception.resource is None
+
+@pytest.mark.parametrize("resource_path", [
+    pytest.param("config.yaml", id="F/YF-001"),
+    pytest.param("config.yml", id="F/YF-002"),
+    pytest.param("CONFIG.YAML", id="F/YF-003"),
+])
+def test_get_parser_dispatches_yaml_parser(resource_path):
+    """Returns a YamlParser for suported YAML extensions."""
+
+    # Act
+    parser = ParserFactory.get_parser(resource_path)
+
+    # Assert
+    assert isinstance(parser, YamlParser)
+    assert isinstance(parser, BaseParser)

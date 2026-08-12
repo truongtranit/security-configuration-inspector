@@ -1,7 +1,9 @@
 from pathlib import Path
 from typing import Dict, Type, Union
+
 from src.parsers.base_parser import BaseParser
 from src.parsers.json_parser import JsonParser
+from src.parsers.yaml_parser import YamlParser
 from src.exceptions.factory_exceptions import FactoryError, UnsupportedParserError
 
 
@@ -10,6 +12,8 @@ class ParserFactory:
 
     _registered_parsers: Dict[str, Type[BaseParser]] = {
         ".json": JsonParser,
+        ".yaml": YamlParser,
+        ".yml": YamlParser,
         # Add more extensions and parsers here
     }
 
