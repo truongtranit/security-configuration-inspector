@@ -13,21 +13,38 @@ The primary intended user is a Security Analyst who needs to audit infrastructur
 ## System Architecture
 
 ```mermaid
-graph TD
+flowchart LR
+    subgraph Input["Input Layer"]
+        Resource["Configuration Resource"]
+        Reader["FileReader"]
+    end
 
-    User["Security Analyst"]
+    subgraph Parsing["Parsing Layer"]
+        Factory["ParserFactory"]
+        JSON["JsonParser"]
+        YAML["YamlParser"]
+    end
 
-    User --> App["Security Configuration Inspector"]
+    subgraph Processing["Processing Layer"]
+        Normalizer["ConfigNormalizer"]
+        Validator["SecurityValidator"]
+    end
 
-    App --> Readers["Readers"]
-    App --> Parsers["Parsers"]
-    App --> Normalizers["Normalizers"]
-    App --> Validators["Validators"]
-    App --> Reporters["Reporters"]
+    subgraph Output["Output Layer"]
+        Reporter["ReportGenerator"]
+    end
 
-    Validators --> Policies["Security Policies"]
+    Resource --> Reader
+    Reader -->|bytes| Factory
 
-    Reporters --> Reports["Compliance Reports"]
+    Factory -->|.json| JSON
+    Factory -->|.yaml / .yml| YAML
+
+    JSON --> Normalizer
+    YAML --> Normalizer
+
+    Normalizer --> Validator
+    Validator --> Reporter
 ```
 
 > **Note:** This diagram illustrates the static component architecture of the application. Runtime execution and data transformation are documented separately in the Processing Pipeline and Sequence Diagram.
