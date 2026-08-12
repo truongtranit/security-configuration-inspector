@@ -39,30 +39,33 @@ graph TD
 The system processes data linearly through decoupled components:
 
 ```mermaid
-flowchart LR
-
-    A["Configuration Resource"]
-        --> B["Reader"]
+flowchart TD
+    A["Configuration Resource"] --> B["FileReader"]
 
     B --> C["Raw Bytes"]
 
     C --> D["ParserFactory"]
 
-    D --> E["Concrete Parser"]
+    D --> E{"File Extension"}
 
-    E --> F["Python Object"]
+    E -->|".json"| F["JsonParser"]
+    E -->|".yaml"| G["YamlParser"]
+    E -->|".yml"| G
 
-    F --> G["Normalizer"]
+    F --> H["Python Object"]
+    G --> H
 
-    G --> H["Canonical Model"]
+    H --> I["ConfigNormalizer"]
 
-    H --> I["Security Validator"]
+    I --> J["Canonical Configuration Model"]
 
-    I --> J["Validation Result"]
+    J --> K["SecurityValidator"]
 
-    J --> K["Report Generator"]
+    K --> L["Validation Results"]
 
-    K --> L["HTML / JSON Report"]
+    L --> M["ReportGenerator"]
+
+    M --> N["Security Report"]
 ```
 
 ---
@@ -71,44 +74,37 @@ flowchart LR
 
 ```mermaid
 sequenceDiagram
+    participant App as Application
+    participant Reader as FileReader
+    participant Factory as ParserFactory
+    participant Parser as Concrete Parser
+    participant Normalizer as ConfigNormalizer
+    participant Validator as SecurityValidator
+    participant Reporter as ReportGenerator
 
-    actor User
+    App->>Reader: read(resource)
+    Reader-->>App: raw bytes
 
-    participant Main
-    participant Reader
-    participant ParserFactory
-    participant Parser
-    participant Normalizer
-    participant Validator
-    participant Reporter
+    App->>Factory: get_parser(resource)
+    Factory->>Factory: Resolve file extension
 
-    User->>Main: Scan()
+    alt .json
+        Factory-->>App: JsonParser instance
+    else .yaml / .yml
+        Factory-->>App: YamlParser instance
+    end
 
-    Main->>Reader: read(resource)
+    App->>Parser: parse(raw bytes)
+    Parser-->>App: Python object
 
-    Reader-->>Main: bytes
+    App->>Normalizer: normalize(object)
+    Normalizer-->>App: canonical configuration
 
-    Main->>ParserFactory: get_parser(resource)
+    App->>Validator: validate(configuration)
+    Validator-->>App: validation results
 
-    ParserFactory-->>Main: JsonParser
-
-    Main->>Parser: parse(bytes)
-
-    Parser-->>Main: dict
-
-    Main->>Normalizer: normalize(dict)
-
-    Normalizer-->>Main: canonical_dict
-
-    Main->>Validator: validate(canonical_dict)
-
-    Validator-->>Main: ValidationResult
-
-    Main->>Reporter: generate(result)
-
-    Reporter-->>Main: HTML Report
-
-    Main-->>User: Display Report
+    App->>Reporter: generate(results)
+    Reporter-->>App: security report
 ```
 
 ---
