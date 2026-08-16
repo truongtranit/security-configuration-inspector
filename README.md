@@ -236,22 +236,22 @@ python main.py config.json
 
 # Development Progress
 
-  Component                                       Status
-  ------------------------------------------ ----------------
-  Project Setup                                     ✅
-  BaseReader                                        ✅
-  FileReader                                        ✅
-  BaseParser                                        ✅
-  JsonParser                                        ✅
-  YamlParser                                        ✅
-  ParserFactory                                     ✅
-  Unit Tests                                        ✅
-  ConfigNormalizer --- structural contract    🟢 In Progress
-  ConfigNormalizer --- canonical schema             ⬜
-  ConfigNormalizer --- field mapping                ⬜
-  SecurityValidator                                 ⬜
-  ReportGenerator                                   ⏳
-  CLI                                               ⏳
+| Component | Status |
+|---|:---:|
+| Project Setup | ✅ Complete |
+| BaseReader | ✅ Complete |
+| FileReader | ✅ Complete |
+| BaseParser | ✅ Complete |
+| JsonParser | ✅ Complete |
+| YamlParser | ✅ Complete |
+| ParserFactory | ✅ Complete |
+| Unit Tests | ✅ Complete |
+| ConfigNormalizer — Structural Contract | ✅ Complete |
+| ConfigNormalizer — Canonical Schema | 🟡 In Progress |
+| ConfigNormalizer — Field Mapping | ⬜ Planned |
+| SecurityValidator | ⬜ Planned |
+| ReportGenerator | ⬜ Planned |
+| CLI | ⬜ Planned |
 
 ------------------------------------------------------------------------
 
