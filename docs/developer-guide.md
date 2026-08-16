@@ -1,6 +1,6 @@
 # Class Diagram
 
-```mermaid
+``` mermaid
 classDiagram
 
 class BaseReader{
@@ -59,11 +59,11 @@ BaseReporter <|-- HtmlReporter
 BaseReporter <|-- JsonReporter
 ```
 
----
+------------------------------------------------------------------------
 
 # Processing Pipeline
 
-```mermaid
+``` mermaid
 flowchart TD
 
     Resource["Configuration Resource"]
@@ -95,12 +95,11 @@ flowchart TD
     Reporter --> Reports["Compliance Reports"]
 ```
 
----
-
+------------------------------------------------------------------------
 
 # Full Runtime Sequence Diagram
 
-```mermaid
+``` mermaid
 sequenceDiagram
 
     actor User
@@ -121,11 +120,15 @@ sequenceDiagram
 
     Main->>ParserFactory: get_parser(resource)
 
+    alt .json
     ParserFactory-->>Main: JsonParser
+else .yaml / .yml
+    ParserFactory-->>Main: YamlParser
+end
 
     Main->>JsonParser: parse(bytes)
 
-    JsonParser-->>Main: dict
+    JsonParser-->>Main: Python object
 
     Main->>ConfigNormalizer: normalize(dict)
 
@@ -142,32 +145,31 @@ sequenceDiagram
     Main-->>User: Display HTML Report
 ```
 
-
----
-
+------------------------------------------------------------------------
 
 # ParserFactory
 
 ## Purpose
 
-ParserFactory is responsible for selecting and instantiating the appropriate parser implementation based on the configuration resource.
+ParserFactory is responsible for selecting and instantiating the
+appropriate parser implementation based on the configuration resource.
 
 ## Responsibilities
 
-- Accept both `str` and `pathlib.Path`
-- Normalize file extensions
-- Return concrete parser implementations
-- Support runtime parser registration
-- Raise meaningful domain exceptions
+-   Accept both `str` and `pathlib.Path`
+-   Normalize file extensions
+-   Return concrete parser implementations
+-   Support runtime parser registration
+-   Raise meaningful domain exceptions
 
 ## Non-Responsibilities
 
-- Reading files
-- Parsing configuration
-- Validation
-- Normalization
+-   Reading files
+-   Parsing configuration
+-   Validation
+-   Normalization
 
----
+------------------------------------------------------------------------
 
 ## Design Decisions
 
@@ -177,11 +179,11 @@ The registry stores parser classes rather than parser instances.
 
 Reasons:
 
-- fresh parser instance per request
-- avoids shared mutable state
-- supports dependency injection
-- supports dynamic registration
-- follows the Open/Closed Principle
+-   fresh parser instance per request
+-   avoids shared mutable state
+-   supports dependency injection
+-   supports dynamic registration
+-   follows the Open/Closed Principle
 
 ### Public API
 
@@ -189,33 +191,95 @@ ParserFactory.get_parser(resource)
 
 Accepts:
 
-- str
-- pathlib.Path
+-   str
+-   pathlib.Path
 
 Returns:
 
-- BaseParser
+-   BaseParser
 
 Raises:
 
-- FactoryError
-- UnsupportedParserError
+-   FactoryError
+-   UnsupportedParserError
 
----
+------------------------------------------------------------------------
 
 # Adding a Parser
+
 ## 1.
+
 Create BaseParser subclass
 
 ## 2.
+
 Implement parse()
 
 ## 3.
+
 Register with ParserFactory
 
 ## 4.
+
 Write tests
 
 ## 5.
+
 Update documentation
 
+------------------------------------------------------------------------
+
+# Current ConfigNormalizer Contract
+
+`ConfigNormalizer` currently establishes the structural boundary between
+parser output and validation.
+
+``` text
+Input
+  |
+  +-- dict ----------------------> accepted
+  |
+  +-- None -----------------------> ConfigurationInvalidError
+  |
+  +-- list/scalar/other ---------> ConfigurationInvalidError
+```
+
+For accepted mappings:
+
+-   Empty mappings are valid.
+-   Nested mappings and lists are preserved.
+-   Scalar values and their Python types are preserved.
+-   The caller's input is not mutated.
+
+The canonical schema and field mapping rules are Sprint 2 work and must
+be defined before implementing those transformations.
+
+## Planned BaseNormalizer
+
+A `BaseNormalizer` abstraction is planned as an extension point:
+
+``` python
+from abc import ABC, abstractmethod
+from typing import Any
+
+class BaseNormalizer(ABC):
+    @abstractmethod
+    def normalize(self, raw_payload: Any) -> dict[str, Any]:
+        ...
+```
+
+It should be introduced when the project requires multiple normalizer
+implementations; it should not be added merely for inheritance.
+
+------------------------------------------------------------------------
+
+# Normalizer Development Workflow
+
+1.  Define the canonical schema requirement.
+2.  Write a test for the desired behavior.
+3.  Implement the smallest behavior required by the test.
+4.  Verify existing parser contracts remain unchanged.
+5.  Add JSON/YAML equivalence tests where applicable.
+6.  Update `testing_backlog.md`.
+7.  Update architecture documentation when the component contract
+    changes.
