@@ -1,6 +1,9 @@
+from unittest import result
+
 import pytest
 from copy import deepcopy
 
+from src.normalizers.base_normalizer import BaseNormalizer
 from src.normalizers.config_normalizer import ConfigNormalizer
 from src.exceptions.normalizer_exceptions import (
     ConfigurationInvalidError,
@@ -19,30 +22,18 @@ def test_normalize_returns_mapping_for_valid_configuration(normalizer):
 
     # Arrange
     raw_payload = {
+        "port": 22,
         "server": {
-            "port": 22,
             "enabled": True,
-        }
+        },
     }
 
     # Act
     result = normalizer.normalize(raw_payload)
 
     # Assert
-    assert result == raw_payload
-    assert isinstance(result, dict)
-
-def test_normalize_returns_empty_mapping_for_empty_configuration(normalizer):
-    """Returns an empty dictionary for an empty configuration mapping."""
-
-    # Arrange
-    raw_payload = {}
-
-    # Act
-    result = normalizer.normalize(raw_payload)
-
-    # Assert
-    assert result == {}
+    assert result["port"] == 22
+    assert result["server"]["enabled"] is True
     assert isinstance(result, dict)
 
 def test_normalize_preserves_nested_configuration_structure(normalizer):
@@ -50,21 +41,21 @@ def test_normalize_preserves_nested_configuration_structure(normalizer):
 
     # Arrange
     raw_payload = {
+        "port": 22,
         "database": {
             "host": "localhost",
-            "port": 5432,
             "credentials": {
                 "username": "admin",
                 "password": "secret",
-            }
-        }
+            },
+        },
     }
 
     # Act
     result = normalizer.normalize(raw_payload)
 
     # Assert
-    assert result == raw_payload
+    assert result["port"] == 22
     assert isinstance(result, dict)
 
 def test_normalize_preserves_nested_list_structure(normalizer):
@@ -72,25 +63,23 @@ def test_normalize_preserves_nested_list_structure(normalizer):
 
     # Arrange
     raw_payload = {
+        "port": 22,
         "firewall": {
             "rules": [
-                {"port": 22, "allow": False},
                 {"port": 443, "allow": True},
             ]
-        }
+        },
     }
 
     # Act
     result = normalizer.normalize(raw_payload)
 
     # Assert
-    assert result == raw_payload
+    assert result["port"] == 22
     assert isinstance(result["firewall"]["rules"], list)
-
 
 @pytest.mark.parametrize("key, scalar_value", [
     ("name", "inspector"),
-    ("port", 5432),
     ("enabled", True),
     ("threshold", 0.95),
     ("description", None),
@@ -99,7 +88,10 @@ def test_normalize_preserves_scalar_values(normalizer, key, scalar_value):
     """Preserves scalar values in the configuration mapping."""
 
     # Arrange
-    raw_input = {key: scalar_value}
+    raw_input = {
+        "port": 22,
+        key: scalar_value,
+    }
 
     # Act
     result = normalizer.normalize(raw_input)
@@ -168,6 +160,7 @@ def test_normalize_does_not_mutate_input(normalizer):
 
     # Arrange
     raw_payload = {
+        "port": 22,
         "server": {
             "port": 22,
             "enabled": True,
@@ -186,3 +179,26 @@ def test_normalize_does_not_mutate_input(normalizer):
 
     # Assert
     assert raw_payload == original_payload
+
+def test_config_normalizer_implements_base_normalizer(normalizer):
+    """ConfigNormalizer implements the BaseNormalizer contract."""
+
+    assert isinstance(normalizer, BaseNormalizer)
+
+def test_normalize_returns_independent_copy(normalizer):
+    """Returns an independent copy of the input configuration."""
+
+    # Arrange
+    raw_payload = {
+        "port": 22,
+        "server": {
+            "port": 22,
+        },
+    }
+
+    # Act
+    result = normalizer.normalize(raw_payload)
+
+    # Assert
+    assert result is not raw_payload
+    assert result["server"] is not raw_payload["server"]

@@ -246,6 +246,7 @@ python main.py config.json
 | YamlParser | ✅ Complete |
 | ParserFactory | ✅ Complete |
 | Unit Tests | ✅ Complete |
+| BaseNormalizer | ✅ Complete |
 | ConfigNormalizer — Structural Contract | ✅ Complete |
 | ConfigNormalizer — Canonical Schema | 🟡 In Progress |
 | ConfigNormalizer — Field Mapping | ⬜ Planned |

@@ -31,10 +31,12 @@ ParserFactory --> BaseParser
 
 class BaseNormalizer{
     <<abstract>>
-    +normalize(dict)
+    +normalize(raw_payload) dict
 }
 
-class ConfigNormalizer
+class ConfigNormalizer {
+    +normalize(raw_payload) dict
+}
 
 BaseNormalizer <|-- ConfigNormalizer
 

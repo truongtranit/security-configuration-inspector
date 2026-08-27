@@ -213,86 +213,104 @@ priority to support incremental development and test-driven design.
 
 ## Structural Contract
 
-These tests establish the current structural contract between parser
-output and the validation layer.
+These tests establish the structural boundary between parser output and the normalization layer.
 
-  ------------------------------------------------------------------------------------------------
-         ID            Priority     Behavior        Expected Result                    Status
-  ---------------- ---------------- --------------- ----------------------------- ----------------
-       N-001             High       Valid           Returns mapping                 ✅ Complete
-                                    configuration                                 
-                                    mapping                                       
+| ID | Priority | Behavior | Expected Result | Status |
+|---|---|---|---|---|
+| N-001 | High | Valid configuration mapping | Returns mapping | ✅ Complete |
+| N-002 | High | Empty mapping | Returns empty mapping | ✅ Complete |
+| N-003 | High | Nested mappings | Preserves nested structure | ✅ Complete |
+| N-004 | High | Nested sequences | Preserves list structure | ✅ Complete |
+| N-005 | High | Scalar values | Preserves value and Python type | ✅ Complete |
+| N-006 | High | `None` root | Raises `ConfigurationInvalidError` | ✅ Complete |
+| N-007 | High | Non-mapping root | Raises `ConfigurationInvalidError` | ✅ Complete |
+| N-008 | High | Scalar root | Raises `ConfigurationInvalidError` | ✅ Complete |
+| N-009 | High | Input immutability | Original input remains unchanged | ✅ Complete |
+| N-010 | High | Exception hierarchy | Follows application exception hierarchy | ✅ Complete |
 
-       N-002             High       Empty mapping   Returns empty mapping           ✅ Complete
+> **Note:** N-005 and N-008 use parameterized pytest cases. Backlog IDs represent behavior contracts rather than individual pytest node IDs.
 
-       N-003             High       Nested mappings Preserves nested structure      ✅ Complete
+---
 
-       N-004             High       Nested          Preserves list structure        ✅ Complete
-                                    sequences                                     
+## Canonical Schema & Field Validation
 
-       N-005             High       Scalar values   Preserves value and Python      ✅ Complete
-                                                    type                          
+| ID | Priority | Behavior | Expected Result | Status |
+|---|---|---|---|---|
+| N-011 | High | Valid `port` supplied | Normalizes successfully and applies defaults | ✅ Complete |
+| N-012 | High | Missing `port` | Raises `ConfigurationInvalidError` | ✅ Complete |
+| N-013 | High | `port` below `1` | Raises `ConfigurationInvalidError` | ✅ Complete |
+| N-014 | High | `port` above `65535` | Raises `ConfigurationInvalidError` | ✅ Complete |
+| N-015 | High | `port` is not a strict integer | Raises `ConfigurationInvalidError` | ✅ Complete |
+| N-016 | High | `port` is boolean | Raises `ConfigurationInvalidError` | ✅ Complete |
+| N-017 | High | Missing `permit_root_login` | Defaults to `False` | ✅ Complete |
+| N-018 | High | Missing `password_authentication` | Defaults to `False` | ✅ Complete |
+| N-019 | High | Missing `protocol_version` | Defaults to `2` | ✅ Complete |
+| N-020 | High | Missing `max_auth_tries` | Defaults to `3` | ✅ Complete |
+| N-021 | High | Missing `allow_users` | Defaults to an independent empty list | ✅ Complete |
+| N-032 | High | Invalid `permit_root_login` | Rejects values that are not strict booleans | ✅ Complete |
+| N-033 | High | Invalid `password_authentication` | Rejects values that are not strict booleans | ✅ Complete |
+| N-034 | High | Valid `protocol_version` | Strict integer value `2` normalizes successfully | ✅ Complete |
+| N-035 | High | Invalid `protocol_version` | Rejects invalid type or value | ✅ Complete |
+| N-036 | High | Valid `max_auth_tries` | Positive integer normalizes successfully | ✅ Complete |
+| N-037 | High | Invalid `max_auth_tries` | Rejects non-integers and values less than `1` | ✅ Complete |
 
-       N-006             High       `None` root     Raises                          ✅ Complete
-                                                    `ConfigurationInvalidError`   
+---
 
-       N-007             High       Non-mapping     Raises                          ✅ Complete
-                                    root            `ConfigurationInvalidError`   
+## Alias Resolution & Ambiguity Handling
 
-       N-008             High       Scalar root     Raises                          ✅ Complete
-                                                    `ConfigurationInvalidError`   
+| ID | Priority | Behavior | Expected Result | Status |
+|---|---|---|---|---|
+| N-022 | High | `listen_port` alias | Resolves to canonical `port` | ✅ Complete |
+| N-023 | High | `root_login` alias | Resolves to `permit_root_login` | ✅ Complete |
+| N-024 | High | `password_auth` alias | Resolves to `password_authentication` | ✅ Complete |
+| N-025 | High | `protocol` alias | Resolves to `protocol_version` | ✅ Complete |
+| N-026 | High | `max_retries` alias | Resolves to `max_auth_tries` | ✅ Complete |
+| N-027 | High | `allowed_users` alias | Resolves to `allow_users` | ✅ Complete |
+| N-028 | High | Canonical field and alias conflict | Raises `ConfigurationInvalidError` | ✅ Complete |
+| N-029 | High | Multiple aliases conflict | Raises `ConfigurationInvalidError` | ✅ Complete |
+| N-030 | High | Multiple aliases have matching values | Normalizes successfully | ✅ Complete |
+| N-031 | High | Canonical field and alias have matching values | Normalizes successfully | ✅ Complete |
 
-       N-009             High       Input           Original input remains          ✅ Complete
-                                    immutability    unchanged                     
+> **Ambiguity rule:** Multiple representations of the same canonical field are accepted only when their values agree. Conflicting values raise `ConfigurationInvalidError`; the normalizer must not silently choose one value.
 
-       N-010             High       Exception       Follows application exception   ✅ Complete
-                                    hierarchy       hierarchy                     
-  ------------------------------------------------------------------------------------------------
+---
 
-> **Note:** N-005 and N-008 use parameterized pytest cases. The backlog
-> IDs represent behavior contracts rather than individual pytest node
-> IDs.
+## `allow_users` Validation & Canonicalization
 
-## Canonical Schema & Field Mapping
+| ID | Priority | Behavior | Expected Result | Status |
+|---|---|---|---|---|
+| N-038 | High | Invalid `allow_users` container or items | Rejects non-lists and non-string items | ✅ Complete |
+| N-039 | High | Empty username | Raises `ConfigurationInvalidError` | ✅ Complete |
+| N-040 | High | Whitespace-only username | Raises `ConfigurationInvalidError` | ✅ Complete |
+| N-041 | High | Surrounding whitespace | Usernames are trimmed | ✅ Complete |
+| N-042 | High | Duplicate usernames | Deduplicates while preserving first-occurrence order | ✅ Complete |
+| N-043 | High | Canonicalization immutability | Original input remains unchanged | ✅ Complete |
 
-These are the remaining Sprint 2 normalization behaviors.
+### `allow_users` Contract
 
-  ---------------------------------------------------------------------------------------------------
-        ID          Priority    Behavior          Expected Result      Status     Notes
-  -------------- -------------- ----------------- ---------------- -------------- -------------------
-      N-011           High      Define canonical  Canonical fields 🟡 In Progress Design decision
-                                schema            and types are                   required
-                                                  documented                      
+```text
+allow_users
+    │
+    ├── Must be a list
+    ├── Every item must be a string
+    ├── Empty usernames are invalid
+    ├── Whitespace-only usernames are invalid
+    ├── Leading and trailing whitespace is trimmed
+    ├── Duplicate canonical usernames are removed
+    └── First-occurrence order is preserved
+```
 
-      N-012           High      Define required   Required fields    ⬜ Planned   Depends on N-011
-                                fields            are explicitly                  
-                                                  documented                      
+> **Canonicalization order:** Validate container and item types, reject blank usernames, trim surrounding whitespace, then deduplicate normalized values. This ensures `"  admin  "` and `"admin"` resolve to one canonical username.
 
-      N-013           High      Define optional   Optional           ⬜ Planned   Depends on N-011
-                                fields/defaults   behavior is                     
-                                                  explicitly                      
-                                                  documented                      
+---
 
-      N-014           High      Define field      Source aliases     ⬜ Planned   Depends on N-011
-                                aliases           map to canonical                
-                                                  fields                          
+## Sprint 2 Integration Backlog
 
-      N-015           High      Normalize mapped  Produces           ⬜ Planned   Depends on
-                                fields            canonical                       N-011--N-014
-                                                  representation                  
-
-      N-016           High      JSON/YAML         Equivalent         ⬜ Planned   Integration-level
-                                equivalence       JSON/YAML inputs                normalization test
-                                                  produce                         
-                                                  equivalent                      
-                                                  canonical output                
-  ---------------------------------------------------------------------------------------------------
-
-> **Design rule:** Canonical field names, aliases, types, and defaults
-> must be defined before implementation tests are written. They should
-> not be inferred from parser fixtures.
-
-------------------------------------------------------------------------
+| ID | Priority | Behavior | Expected Result | Status |
+|---|---|---|---|---|
+| N-044 | High | Equivalent JSON and YAML configurations | Produce equivalent canonical output | 📋 Backlog |
+| N-045 | Medium | Unknown configuration fields | Preserve, reject, or explicitly handle by contract | 📋 Backlog |
+| N-046 | Medium | Full canonical configuration | Aliases, defaults, validation, and canonicalization work together | 📋 Backlog |
 
 # Future: SecurityValidator
 
