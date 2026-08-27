@@ -1,18 +1,28 @@
 # Security Configuration Inspector
+
 ## Project Overview
+
 ### What problem does this project solve?
-This project automates the scanning of configuration files against established security policies. It addresses the operational challenge of manually checking configurations for security misconfigurations, enabling teams to quickly identify security vulnerabilities, ensure compliance, and generate structured compliance reports automatically.
+
+This project automates the scanning of configuration files against
+established security policies. It addresses the operational challenge of
+manually checking configurations for security misconfigurations,
+enabling teams to quickly identify security vulnerabilities, ensure
+compliance, and generate structured compliance reports automatically.
 
 ### Who is the intended user?
-The primary intended user is a Security Analyst who needs to audit infrastructure configurations, ensure alignment with corporate or industry benchmarks, and generate compliance data.
 
----
+The primary intended user is a Security Analyst who needs to audit
+infrastructure configurations, ensure alignment with corporate or
+industry benchmarks, and generate compliance data.
+
+------------------------------------------------------------------------
 
 # Architecture
 
 ## System Architecture
 
-```mermaid
+``` mermaid
 flowchart LR
     subgraph Input["Input Layer"]
         Resource["Configuration Resource"]
@@ -47,15 +57,17 @@ flowchart LR
     Validator --> Reporter
 ```
 
-> **Note:** This diagram illustrates the static component architecture of the application. Runtime execution and data transformation are documented separately in the Processing Pipeline and Sequence Diagram.
+> **Note:** This diagram illustrates the static component architecture
+> of the application. Runtime execution and data transformation are
+> documented separately in the Processing Pipeline and Sequence Diagram.
 
----
+------------------------------------------------------------------------
 
 ## Processing Pipeline
 
 The system processes data linearly through decoupled components:
 
-```mermaid
+``` mermaid
 flowchart TD
     A["Configuration Resource"] --> B["FileReader"]
 
@@ -85,11 +97,11 @@ flowchart TD
     M --> N["Security Report"]
 ```
 
----
+------------------------------------------------------------------------
 
 ## Sequence Diagram
 
-```mermaid
+``` mermaid
 sequenceDiagram
     participant App as Application
     participant Reader as FileReader
@@ -124,36 +136,46 @@ sequenceDiagram
     Reporter-->>App: security report
 ```
 
----
+------------------------------------------------------------------------
 
 # Features
 
 ## Current Features
 
-- Binary-safe file ingestion
-- JSON configuration parsing
-- Extensible parser selection via `ParserFactory`
-- Dynamic parser registration
-- Comprehensive custom exception hierarchy
-- Unit-tested architecture
-- Clean Architecture inspired component boundaries
+-   Binary-safe file ingestion
+-   JSON configuration parsing
+-   YAML configuration parsing
+-   Extensible parser selection via `ParserFactory`
+-   Dynamic parser registration
+-   Case-insensitive `.json`, `.yaml`, and `.yml` extension handling
+-   Application-level parser and factory exception hierarchy
+-   Comprehensive unit tests for the implemented ingestion and parsing
+    components
+-   Initial `ConfigNormalizer` structural validation
+-   Clean Architecture inspired component boundaries
 
-## Planned Features
+## Current Normalizer Contract
 
-- YAML support
-- Configuration normalization
-- Security policy engine
-- HTML report generation
-- JSON/CSV report export
-- REST API integration
+`ConfigNormalizer` currently:
 
----
+-   Accepts configuration mappings.
+-   Preserves empty mappings.
+-   Preserves nested mappings and lists.
+-   Preserves scalar values and their Python types.
+-   Rejects `None` roots.
+-   Rejects non-mapping roots.
+-   Does not mutate caller input.
+
+Canonical field mapping and the final canonical schema are still Sprint
+2 work.
+
+------------------------------------------------------------------------
 
 # Installation
 
 Clone the repository:
 
-```bash
+``` bash
 git clone https://github.com/<username>/SecurityConfigInspector.git
 
 cd SecurityConfigInspector
@@ -161,7 +183,7 @@ cd SecurityConfigInspector
 
 Create a virtual environment:
 
-```bash
+``` bash
 python -m venv .venv
 ```
 
@@ -169,159 +191,204 @@ Activate it.
 
 Windows
 
-```bash
+``` bash
 .venv\Scripts\activate
 ```
 
 Linux/macOS
 
-```bash
+``` bash
 source .venv/bin/activate
 ```
 
 Install dependencies
 
-```bash
+``` bash
 pip install -r requirements.txt
 ```
 
 Run tests
 
-```bash
+``` bash
 python -m pytest
 ```
 
----
+------------------------------------------------------------------------
 
 # Usage
 
 The command-line interface is currently under development.
 
-At this stage, components can be exercised independently through unit tests:
+At this stage, components can be exercised independently through unit
+tests:
 
-```bash
+``` bash
 python -m pytest
 ```
 
 Future releases will support:
 
-```bash
+``` bash
 python main.py config.json
 ```
 
----
+------------------------------------------------------------------------
 
 # Development Progress
 
 | Component | Status |
-|-----------|:------:|
-| Project Setup | ✅ |
-| BaseReader | ✅ |
-| FileReader | ✅ |
-| BaseParser | ✅ |
-| JsonParser | ✅ |
-| ParserFactory | ✅ |
-| Unit Tests | ✅ |
-| ConfigNormalizer | ⏳ |
-| SecurityValidator | ⏳ |
-| ReportGenerator | ⏳ |
-| CLI | ⏳ |
+|---|:---:|
+| Project Setup | ✅ Complete |
+| BaseReader | ✅ Complete |
+| FileReader | ✅ Complete |
+| BaseParser | ✅ Complete |
+| JsonParser | ✅ Complete |
+| YamlParser | ✅ Complete |
+| ParserFactory | ✅ Complete |
+| Unit Tests | ✅ Complete |
+| BaseNormalizer | ✅ Complete |
+| ConfigNormalizer — Structural Contract | ✅ Complete |
+| ConfigNormalizer — Canonical Schema | 🟡 In Progress |
+| ConfigNormalizer — Field Mapping | ⬜ Planned |
+| SecurityValidator | ⬜ Planned |
+| ReportGenerator | ⬜ Planned |
+| CLI | ⬜ Planned |
 
----
+------------------------------------------------------------------------
 
 # Milestones & Roadmap
 
-## What is the current scope of Sprint 1?
-Sprint 1 establishes the baseline engineering foundation and ingestion pipeline.
-* Infrastructure Setup: Project structure initialization, Python virtual environment configuration, and Git repository setup.
-* Ingestion Layer: Implementation of BaseReader and FileReader to ingest raw text data.
-* Parsing Layer: Implementation of BaseParser, JsonParser, YamlParser, and a dynamic ParserFactory to auto-detect and deserialize files.
-* Quality Assurance: Unit test suites ensuring parsing reliability.
-* Deliverable: A system that ingests a JSON or YAML file and successfully converts it into a native Python object.
+## Sprint 1 --- Ingestion and Parsing
 
-## What are the planned future enhancements?
-The roadmap details the progressive addition of core logic, verification capabilities, and integrations:
-* Sprint 2 (Normalization): Integration of ConfigNormalizer, field mapping rules, and a canonical schema to ensure uniform internal representation regardless of source format.
-* Sprint 3 (Security Validation): A robust policy engine implementing CIS-style security rules providing structured evaluation outcomes (PASS / FAIL / WARNING).
-* Sprint 4 (Reporting & Observability): Multi-format reporting export options (HTML, JSON, CSV) alongside detailed system logging.
-* Sprint 5 (Integration): Integration capabilities to consume REST APIs.
-* Extensibility: Long-term architectural goals include native support for additional configuration formats such as XML and TOML.
+Sprint 1 established the engineering foundation and ingestion pipeline.
 
----
+-   Project setup and Git workflow.
+-   `BaseReader` and `FileReader`.
+-   `BaseParser`, `JsonParser`, and `YamlParser`.
+-   Dynamic `ParserFactory`.
+-   Comprehensive unit tests.
+-   Architecture documentation and diagrams.
+
+**Deliverable:** JSON and YAML configuration data can be read and
+converted into native Python objects.
+
+## Sprint 2 --- Configuration Normalization
+
+Sprint 2 establishes the canonical configuration boundary.
+
+### Completed so far
+
+-   Initial `ConfigNormalizer`.
+-   Root mapping validation.
+-   Empty mapping support.
+-   Nested structure preservation.
+-   Scalar preservation.
+-   Invalid root handling.
+-   Input immutability tests.
+-   Normalizer exception hierarchy tests.
+
+### Remaining work
+
+-   Define `BaseNormalizer`.
+-   Define the canonical configuration schema.
+-   Define canonical field names and types.
+-   Define field mapping rules.
+-   Implement source-to-canonical mappings.
+-   Verify equivalent JSON and YAML configurations produce equivalent
+    canonical representations.
+-   Integrate the normalized representation with validation.
+
+## Sprint 3 --- Security Validation
+
+Planned: security policy engine, CIS-style rules, and structured PASS /
+FAIL / WARNING findings.
+
+## Sprint 4 --- Reporting & Observability
+
+Planned: HTML, JSON/CSV reporting and structured logging.
+
+## Sprint 5 --- Integration
+
+Planned: REST API integration.
+
+## Long-Term Extensibility
+
+Potential support for additional configuration formats such as XML and
+TOML.
+
+------------------------------------------------------------------------
 
 # Non-Functional Requirements
 
 ## Performance
-The application should process 100 configuration files in under 5 seconds.
-## Maintainability
-New parsers should be added without modifying existing validator code.
-## Reliability
-Malformed input should produce informative errors rather than crashes.
-## Security
-No secrets shall be hardcoded.
-Credentials must come from environment variables or configuration files.
 
----
+The application should process 100 configuration files in under 5
+seconds. \## Maintainability New parsers should be added without
+modifying existing validator code. \## Reliability Malformed input
+should produce informative errors rather than crashes. \## Security No
+secrets shall be hardcoded. Credentials must come from environment
+variables or configuration files.
+
+------------------------------------------------------------------------
 
 # Project Structure
 
-```
-SecurityConfigInspector/
+    SecurityConfigInspector/
 
-├── docs/
-│   ├── architecture.md
-│   ├── developer-guide.md
-│   ├── testing_strategy.md
-│   └── adr/
-│
-├── src/
-│   ├── readers/
-│   ├── parsers/
-│   ├── factories/
-│   ├── exceptions/
-│   └── ...
-│
-├── tests/
-│   ├── readers/
-│   ├── parsers/
-│   └── factories/
-│
-├── requirements.txt
-├── pyproject.toml
-└── README.md
-```
+    ├── docs/
+    │   ├── architecture.md
+    │   ├── developer-guide.md
+    │   ├── testing_strategy.md
+    │   └── adr/
+    │
+    ├── src/
+    │   ├── readers/
+    │   ├── parsers/
+    │   ├── factories/
+    │   ├── exceptions/
+    │   └── ...
+    │
+    ├── tests/
+    │   ├── readers/
+    │   ├── parsers/
+    │   └── factories/
+    │
+    ├── requirements.txt
+    ├── pyproject.toml
+    └── README.md
 
----
+------------------------------------------------------------------------
 
 # Documentation
 
 The project documentation includes:
 
-- Architecture Overview
-- Processing Pipeline
-- Sequence Diagrams
-- Architecture Decision Records (ADRs)
-- Developer Guide
-- Testing Strategy
-- Learning Journal
+-   Architecture Overview
+-   Processing Pipeline
+-   Sequence Diagrams
+-   Architecture Decision Records (ADRs)
+-   Developer Guide
+-   Testing Strategy
+-   Learning Journal
 
----
+------------------------------------------------------------------------
 
 # Engineering Principles
 
-This project is intentionally designed as a portfolio-quality software engineering project.
+This project is intentionally designed as a portfolio-quality software
+engineering project.
 
 Key principles include:
 
-- SOLID principles
-- Separation of Concerns
-- Clean Architecture
-- Dependency Inversion
-- Domain-specific exception hierarchy
-- Test-driven thinking
-- Extensible component design
+-   SOLID principles
+-   Separation of Concerns
+-   Clean Architecture
+-   Dependency Inversion
+-   Domain-specific exception hierarchy
+-   Test-driven thinking
+-   Extensible component design
 
----
+------------------------------------------------------------------------
 
 # Testing
 
@@ -329,18 +396,20 @@ The project emphasizes contract-driven unit testing.
 
 Current coverage includes:
 
-- FileReader
-- JsonParser
-- ParserFactory
+-   FileReader
+-   JsonParser
+-   YamlParser
+-   ParserFactory
+-   ConfigNormalizer structural contract
 
 Tests verify:
 
-- Happy paths
-- Boundary conditions
-- Exception translation
-- Public API contracts
-- Dynamic parser registration
+-   Happy paths
+-   Boundary conditions
+-   Exception translation
+-   Public API contracts
+-   Dynamic parser registration
 
----
+------------------------------------------------------------------------
 
 # License

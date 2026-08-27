@@ -1,5 +1,6 @@
 # System Architecture
-```mermaid
+
+``` mermaid
 graph TD
 
     User["Security Analyst"]
@@ -14,12 +15,10 @@ graph TD
 
     Readers --> BaseReader
     BaseReader --> FileReader
-    BaseReader --> HttpReader
 
     Parsers --> ParserFactory
     ParserFactory --> JsonParser
     ParserFactory --> YamlParser
-    ParserFactory --> XmlParser
 
     Normalizers --> ConfigNormalizer
 
@@ -30,17 +29,16 @@ graph TD
 
     Validators --> Policies["CIS Policies"]
 
-    Readers --> Resources["Configuration Files / REST APIs"]
+    Readers --> Resources["Configuration Files"]
 
-    Reporters --> Reports["HTML / JSON Reports"]
-
+    Reporters --> Reports["Planned Security Reports"]
 ```
-> **Note:** This diagram illustrates the static component architecture of the application. Runtime execution and data transformation are documented separately in the Processing Pipeline and Sequence Diagram
----
+
+## \> **Note:** This diagram illustrates the static component architecture of the application. Runtime execution and data transformation are documented separately in the Processing Pipeline and Sequence Diagram
 
 # Component Architecture
 
-```mermaid
+``` mermaid
 graph TD
 
     CLI["main.py"]
@@ -50,7 +48,6 @@ graph TD
 
     ReaderFactory --> BaseReader
     BaseReader --> FileReader
-    BaseReader --> HttpReader
 
     ParserFactory --> BaseParser
     BaseParser --> JsonParser
@@ -70,11 +67,11 @@ graph TD
     JsonReporter --> Reports
 ```
 
----
+------------------------------------------------------------------------
 
 # Processing Pipeline
 
-```mermaid
+``` mermaid
 flowchart TD
 
     Start([Start])
@@ -91,13 +88,13 @@ flowchart TD
 
     ParserFactory --> YAML["YamlParser"]
 
-    JSON --> Dict["Python Dictionary"]
+    JSON --> Object["Python Object"]
 
-    YAML --> Dict
+    YAML --> Object
 
-    Dict --> Normalizer["ConfigNormalizer"]
+    Object --> Normalizer["ConfigNormalizer"]
 
-    Normalizer --> Canonical["Canonical Model"]
+    Normalizer --> Canonical["Canonical Configuration"]
 
     Canonical --> Validator["SecurityValidator"]
 
@@ -108,11 +105,11 @@ flowchart TD
     Reporter --> End([HTML / JSON Report])
 ```
 
---- 
+------------------------------------------------------------------------
 
 # Sequence Diagram
 
-```mermaid
+``` mermaid
 sequenceDiagram
 
     actor User
@@ -133,11 +130,15 @@ sequenceDiagram
 
     Main->>ParserFactory: get_parser(resource)
 
-    ParserFactory-->>Main: JsonParser
+    alt .json
+        ParserFactory-->>Main: JsonParser
+    else .yaml / .yml
+        ParserFactory-->>Main: YamlParser
+    end
 
     Main->>Parser: parse(bytes)
 
-    Parser-->>Main: dict
+    Parser-->>Main: Python object
 
     Main->>Normalizer: normalize(dict)
 
@@ -154,17 +155,21 @@ sequenceDiagram
     Main-->>User: Display Report
 ```
 
----
+------------------------------------------------------------------------
 
-## Design Priciples
+## Design Principles
 
----
+-   Separation of Concerns
+-   SOLID principles
+-   Dependency Inversion
+-   Domain-specific exception handling
+-   Test-driven development
+-   Extensible component boundaries
+
+------------------------------------------------------------------------
 
 ## Project Structure
 
----
+------------------------------------------------------------------------
 
 ## Dependencies
-
-
-
