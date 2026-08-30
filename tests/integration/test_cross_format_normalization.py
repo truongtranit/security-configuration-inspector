@@ -78,3 +78,40 @@ def test_n045_unknown_fields_are_preserved(normalizer):
     # Assert
     assert result["future_security_setting"] is True
     assert result["custom_banner"] == "Authorized access only"
+
+def test_n046_full_configuration_normalizes_to_canonical_structure(
+    normalizer,
+):
+    """N-046: Full configuration normalizes into the canonical representation."""
+
+    # Arrange
+    raw_payload = {
+        "listen_port": 22,
+        "root_login": False,
+        "password_auth": False,
+        "protocol": 2,
+        "max_retries": 3,
+        "allowed_users": [
+            "  admin  ",
+            "auditor",
+            "admin",
+        ],
+        "custom_setting": "preserve-me",
+    }
+
+    # Act
+    result = normalizer.normalize(raw_payload)
+
+    # Assert
+    assert result == {
+        "port": 22,
+        "permit_root_login": False,
+        "password_authentication": False,
+        "protocol_version": 2,
+        "max_auth_tries": 3,
+        "allow_users": [
+            "admin",
+            "auditor",
+        ],
+        "custom_setting": "preserve-me",
+    }
