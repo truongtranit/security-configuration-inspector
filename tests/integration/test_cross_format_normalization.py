@@ -1,6 +1,11 @@
+import pytest
+
 from src.parsers.parser_factory import ParserFactory
 from src.normalizers.config_normalizer import ConfigNormalizer
 
+@pytest.fixture
+def normalizer():
+    return ConfigNormalizer()
 
 def test_n044_equivalent_json_and_yaml_normalize_to_same_canonical_configuration():
     """N-044: Equivalent JSON and YAML inputs produce identical canonical output."""
@@ -57,4 +62,19 @@ def test_n044_equivalent_json_and_yaml_normalize_to_same_canonical_configuration
     assert yaml_normalized == expected
     assert json_normalized == yaml_normalized
 
-    
+def test_n045_unknown_fields_are_preserved(normalizer):
+    """N-045: Unknown configuration fields are preserved during normalization."""
+
+    # Arrange
+    raw_payload = {
+        "port": 22,
+        "future_security_setting": True,
+        "custom_banner": "Authorized access only",
+    }
+
+    # Act
+    result = normalizer.normalize(raw_payload)
+
+    # Assert
+    assert result["future_security_setting"] is True
+    assert result["custom_banner"] == "Authorized access only"
