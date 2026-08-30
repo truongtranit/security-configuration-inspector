@@ -308,7 +308,7 @@ allow_users
 
 | ID | Priority | Behavior | Expected Result | Status |
 |---|---|---|---|---|
-| N-044 | High | Equivalent JSON and YAML configurations | Produce equivalent canonical output | 📋 Backlog |
+| N-044 | High | Equivalent JSON and YAML configurations | Produce equivalent canonical output | ✅ Complete |
 | N-045 | Medium | Unknown configuration fields | Preserve, reject, or explicitly handle by contract | 📋 Backlog |
 | N-046 | Medium | Full canonical configuration | Aliases, defaults, validation, and canonicalization work together | 📋 Backlog |
 
