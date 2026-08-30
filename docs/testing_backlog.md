@@ -310,7 +310,7 @@ allow_users
 |---|---|---|---|---|
 | N-044 | High | Equivalent JSON and YAML configurations | Produce equivalent canonical output | ✅ Complete |
 | N-045 | Medium | Unknown configuration fields | Preserve, reject, or explicitly handle by contract | ✅ Complete |
-| N-046 | Medium | Full canonical configuration | Aliases, defaults, validation, and canonicalization work together | 📋 Backlog |
+| N-046 | Medium | Full canonical configuration | Aliases, defaults, validation, and canonicalization work together | ✅ Complete |
 
 # Future: SecurityValidator
 
