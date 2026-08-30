@@ -1,266 +1,109 @@
-# Class Diagram
+# Developer Guide
 
-``` mermaid
-classDiagram
+## Purpose
 
-class BaseReader{
-    <<abstract>>
-    +read(resource) bytes
-}
+This guide describes the current development conventions and component contracts for the Security Configuration Inspector.
 
-class FileReader
+The project is being developed incrementally using contract-driven tests, small feature branches, focused commits, and pull requests.
 
-BaseReader <|-- FileReader
+---
 
-class BaseParser{
-    <<abstract>>
-    +parse(bytes) dict
-}
+# Architecture at a Glance
 
-class JsonParser
-class YamlParser
-
-BaseParser <|-- JsonParser
-BaseParser <|-- YamlParser
-
-class ParserFactory{
-    +get_parser(resource)
-}
-
-ParserFactory --> BaseParser
-
-class BaseNormalizer{
-    <<abstract>>
-    +normalize(raw_payload) dict
-}
-
-class ConfigNormalizer {
-    +normalize(raw_payload) dict
-}
-
-BaseNormalizer <|-- ConfigNormalizer
-
-class BaseValidator{
-    <<abstract>>
-    +validate(model)
-}
-
-class SecurityValidator
-
-BaseValidator <|-- SecurityValidator
-
-class BaseReporter{
-    <<abstract>>
-    +generate(result)
-}
-
-class HtmlReporter
-class JsonReporter
-
-BaseReporter <|-- HtmlReporter
-BaseReporter <|-- JsonReporter
+```text
+Configuration Resource
+        │
+        ▼
+    FileReader
+        │
+        ▼
+   ParserFactory
+      /     \
+     ▼       ▼
+JsonParser YamlParser
+      \     /
+       ▼   ▼
+  ConfigNormalizer
+        │
+        ▼
+Canonical Configuration
+        │
+        ▼
+ SecurityValidator
+        │
+        ▼
+ ReportGenerator
 ```
 
-------------------------------------------------------------------------
+Each component should have one clear responsibility and a testable boundary.
 
-# Processing Pipeline
-
-``` mermaid
-flowchart TD
-
-    Resource["Configuration Resource"]
-
-    Resource --> Reader["FileReader"]
-
-    Reader --> Bytes["Raw Bytes"]
-
-    Bytes --> ParserFactory
-
-    ParserFactory --> JsonParser
-
-    ParserFactory --> YamlParser
-
-    JsonParser --> Dictionary["Python Dictionary"]
-
-    YamlParser --> Dictionary
-
-    Dictionary --> Normalizer["ConfigNormalizer"]
-
-    Normalizer --> Canonical["Canonical Configuration"]
-
-    Canonical --> Validator["SecurityValidator"]
-
-    Validator --> Findings["Validation Findings"]
-
-    Findings --> Reporter["HtmlReporter / JsonReporter"]
-
-    Reporter --> Reports["Compliance Reports"]
-```
-
-------------------------------------------------------------------------
-
-# Full Runtime Sequence Diagram
-
-``` mermaid
-sequenceDiagram
-
-    actor User
-
-    participant Main
-    participant FileReader
-    participant ParserFactory
-    participant JsonParser
-    participant ConfigNormalizer
-    participant SecurityValidator
-    participant HtmlReporter
-
-    User->>Main: scan(resource)
-
-    Main->>FileReader: read(resource)
-
-    FileReader-->>Main: bytes
-
-    Main->>ParserFactory: get_parser(resource)
-
-    alt .json
-    ParserFactory-->>Main: JsonParser
-else .yaml / .yml
-    ParserFactory-->>Main: YamlParser
-end
-
-    Main->>JsonParser: parse(bytes)
-
-    JsonParser-->>Main: Python object
-
-    Main->>ConfigNormalizer: normalize(dict)
-
-    ConfigNormalizer-->>Main: canonical_dict
-
-    Main->>SecurityValidator: validate(canonical_dict)
-
-    SecurityValidator-->>Main: ValidationResult
-
-    Main->>HtmlReporter: generate(result)
-
-    HtmlReporter-->>Main: HTML
-
-    Main-->>User: Display HTML Report
-```
-
-------------------------------------------------------------------------
+---
 
 # ParserFactory
 
 ## Purpose
 
-ParserFactory is responsible for selecting and instantiating the
-appropriate parser implementation based on the configuration resource.
+`ParserFactory` selects and instantiates the appropriate parser based on a resource's file extension.
 
-## Responsibilities
+## Current API
 
--   Accept both `str` and `pathlib.Path`
--   Normalize file extensions
--   Return concrete parser implementations
--   Support runtime parser registration
--   Raise meaningful domain exceptions
-
-## Non-Responsibilities
-
--   Reading files
--   Parsing configuration
--   Validation
--   Normalization
-
-------------------------------------------------------------------------
-
-## Design Decisions
-
-### Registry stores parser classes
-
-The registry stores parser classes rather than parser instances.
-
-Reasons:
-
--   fresh parser instance per request
--   avoids shared mutable state
--   supports dependency injection
--   supports dynamic registration
--   follows the Open/Closed Principle
-
-### Public API
-
+```python
 ParserFactory.get_parser(resource)
-
-Accepts:
-
--   str
--   pathlib.Path
-
-Returns:
-
--   BaseParser
-
-Raises:
-
--   FactoryError
--   UnsupportedParserError
-
-------------------------------------------------------------------------
-
-# Adding a Parser
-
-## 1.
-
-Create BaseParser subclass
-
-## 2.
-
-Implement parse()
-
-## 3.
-
-Register with ParserFactory
-
-## 4.
-
-Write tests
-
-## 5.
-
-Update documentation
-
-------------------------------------------------------------------------
-
-# Current ConfigNormalizer Contract
-
-`ConfigNormalizer` currently establishes the structural boundary between
-parser output and validation.
-
-``` text
-Input
-  |
-  +-- dict ----------------------> accepted
-  |
-  +-- None -----------------------> ConfigurationInvalidError
-  |
-  +-- list/scalar/other ---------> ConfigurationInvalidError
 ```
 
-For accepted mappings:
+### Accepted inputs
 
--   Empty mappings are valid.
--   Nested mappings and lists are preserved.
--   Scalar values and their Python types are preserved.
--   The caller's input is not mutated.
+- `str`
+- `pathlib.Path`
 
-The canonical schema and field mapping rules are Sprint 2 work and must
-be defined before implementing those transformations.
+### Current registrations
 
-## Planned BaseNormalizer
+```text
+.json       → JsonParser
+.yaml       → YamlParser
+.yml        → YamlParser
+```
 
-A `BaseNormalizer` abstraction is planned as an extension point:
+### Responsibilities
 
-``` python
+- Normalize extensions.
+- Select the registered parser class.
+- Return a fresh parser instance.
+- Support runtime registration.
+- Raise factory-specific exceptions for invalid or unsupported resources.
+
+### Non-responsibilities
+
+- File I/O.
+- Configuration parsing.
+- Configuration normalization.
+- Security validation.
+
+## Adding a Parser
+
+1. Create a `BaseParser` subclass.
+2. Implement `parse(bytes)`.
+3. Translate relevant low-level errors into domain exceptions.
+4. Register the parser with `ParserFactory`.
+5. Add focused parser tests.
+6. Add factory routing tests.
+7. Add documentation.
+
+---
+
+# ConfigNormalizer
+
+## Purpose
+
+`ConfigNormalizer` establishes the canonical configuration boundary between parser output and future security validation.
+
+The normalizer is deliberately responsible for **representation and structural correctness**, not security-policy decisions.
+
+For example, it can determine that `password_auth` is an alias for `password_authentication`. A future `SecurityValidator` should determine whether enabling password authentication violates a security policy.
+
+## Base Contract
+
+```python
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -270,18 +113,260 @@ class BaseNormalizer(ABC):
         ...
 ```
 
-It should be introduced when the project requires multiple normalizer
-implementations; it should not be added merely for inheritance.
+`ConfigNormalizer` implements this contract.
 
-------------------------------------------------------------------------
+## Current Responsibilities
+
+1. Validate the root type.
+2. Deep-copy caller input.
+3. Resolve source aliases.
+4. Detect conflicting representations.
+5. Require `port`.
+6. Apply optional defaults.
+7. Validate canonical field types and values.
+8. Canonicalize `allow_users`.
+9. Preserve unknown fields.
+10. Return the canonical dictionary.
+
+## Root Contract
+
+```text
+dict       → accepted for normalization
+non-dict   → ConfigurationInvalidError
+```
+
+The required canonical field means an accepted dictionary must ultimately contain a valid `port`.
+
+## Canonical Schema
+
+| Field | Type | Rule | Default |
+|---|---|---|---|
+| `port` | `int` | Required, 1–65535, strict integer | — |
+| `permit_root_login` | `bool` | Strict boolean | `False` |
+| `password_authentication` | `bool` | Strict boolean | `False` |
+| `protocol_version` | `int` | Strict value `2` | `2` |
+| `max_auth_tries` | `int` | Positive integer | `3` |
+| `allow_users` | `list[str]` | Valid usernames only | `[]` |
+
+## Alias Resolution
+
+The normalizer supports source aliases for the canonical fields.
+
+Examples:
+
+```python
+{"listen_port": 2222}
+```
+
+becomes:
+
+```python
+{"port": 2222, ...}
+```
+
+and:
+
+```python
+{"allowed_users": ["alice"]}
+```
+
+becomes:
+
+```python
+{"allow_users": ["alice"], ...}
+```
+
+## Ambiguity Handling
+
+Multiple representations of the same canonical field are allowed only when their values agree.
+
+Valid:
+
+```python
+{
+    "port": 22,
+    "listen_port": 22,
+}
+```
+
+Invalid:
+
+```python
+{
+    "port": 22,
+    "listen_port": 2222,
+}
+```
+
+The second case raises `ConfigurationInvalidError`.
+
+This prevents silent precedence rules from hiding contradictory configuration.
+
+## `allow_users`
+
+The canonicalization sequence is:
+
+```text
+validate list
+    ↓
+validate every item is str
+    ↓
+reject empty / whitespace-only usernames
+    ↓
+trim surrounding whitespace
+    ↓
+deduplicate
+    ↓
+preserve first-occurrence order
+```
+
+Example:
+
+```python
+["  alice  ", "\tbob\n", "alice"]
+```
+
+becomes:
+
+```python
+["alice", "bob"]
+```
+
+## Unknown Fields
+
+Unknown fields are currently preserved.
+
+This is intentional: the normalizer canonicalizes fields it understands without silently discarding information it does not understand.
+
+Security meaning belongs to `SecurityValidator`.
+
+---
+
+# Testing Strategy
+
+The project uses pytest and contract-focused tests.
+
+Tests should generally follow:
+
+```text
+Arrange
+  ↓
+Act
+  ↓
+Assert
+```
+
+## Parameterization
+
+Use `pytest.mark.parametrize` when the same behavior needs to be tested against several inputs.
+
+Example:
+
+```python
+@pytest.mark.parametrize("invalid_port", [0, -1, 65536])
+def test_invalid_port(...):
+    ...
+```
+
+This keeps tests concise while preserving explicit edge cases.
+
+## Integration Tests
+
+Integration tests should verify important component boundaries rather than duplicate every unit test.
+
+N-044 verifies:
+
+```text
+JSON → JsonParser → ConfigNormalizer
+YAML → YamlParser → ConfigNormalizer
+```
+
+produce the same canonical output for equivalent configurations.
+
+N-046 verifies that a realistic mixed configuration exercises the complete normalization contract.
+
+---
 
 # Normalizer Development Workflow
 
-1.  Define the canonical schema requirement.
-2.  Write a test for the desired behavior.
-3.  Implement the smallest behavior required by the test.
-4.  Verify existing parser contracts remain unchanged.
-5.  Add JSON/YAML equivalence tests where applicable.
-6.  Update `testing_backlog.md`.
-7.  Update architecture documentation when the component contract
-    changes.
+For a new normalizer behavior:
+
+1. Define the behavior contract.
+2. Add or update the testing backlog.
+3. Write the failing test.
+4. Implement the smallest behavior needed.
+5. Run the focused test.
+6. Run the complete test suite.
+7. Update documentation.
+8. Review the diff.
+9. Commit the focused change.
+10. Push the feature branch.
+11. Open a pull request.
+12. Merge only after tests are green.
+13. Return to `main`, pull the merged changes, and delete the feature branch.
+
+---
+
+# Git Workflow
+
+The project uses short-lived feature branches.
+
+Typical workflow:
+
+```bash
+git checkout main
+git pull origin main
+git checkout -b test/<focused-change>
+
+python -m pytest -v
+
+git status
+git diff
+
+git add <files>
+git diff --cached
+git commit -m "<focused message>"
+git push -u origin test/<focused-change>
+```
+
+After the pull request is merged:
+
+```bash
+git checkout main
+git pull origin main
+git status
+git branch -d test/<focused-change>
+```
+
+The preferred state before starting new work is:
+
+```text
+main
+up to date with origin/main
+working tree clean
+```
+
+---
+
+# Definition of Done
+
+A feature/test backlog item is considered complete when:
+
+- The behavior has an explicit contract.
+- Tests cover the intended behavior.
+- The full pytest suite passes.
+- Relevant documentation is updated.
+- The change is committed.
+- The branch is pushed.
+- The pull request is reviewed and merged.
+- `main` is synchronized afterward.
+
+---
+
+# Current Development Position
+
+Sprint 1 is complete.
+
+Sprint 2 — ConfigNormalizer — is complete through N-046.
+
+The next major development area is `SecurityValidator`, which will consume the canonical configuration produced by `ConfigNormalizer`.

@@ -1,61 +1,260 @@
-# Sprint 1 Learning Journal: Data Ingestion & Parsing Infrastructure
+# Learning Journal
+
+# Sprint 1 — Data Ingestion & Parsing Infrastructure
 
 ## What Did I Build?
 
-In Sprint 1, I built the complete, decoupled core for the data ingestion and parsing layer of the Security Configuration Inspector. This layer acts as the foundation of the pipeline, taking raw inputs and transforming them into structured Python representations.
+In Sprint 1, I built the decoupled data-ingestion and parsing foundation for the Security Configuration Inspector.
 
----
+The layer separates:
+
+```text
+Resource → FileReader → raw bytes → ParserFactory → concrete parser → Python object
+```
+
+The completed components include `BaseReader`, `FileReader`, `BaseParser`, `JsonParser`, `YamlParser`, and `ParserFactory`.
 
 ## What Did I Learn?
 
 ### 1. Interface Honesty & Type Contracts
-I learned the importance of avoiding leaked business assumptions in base interfaces. Initially, assuming that `BaseParser.parse()` should promise a `dict` seemed logical because configuration files are typically key-value mappings. However, configuration formats like JSON and YAML allow root-level lists, scalars, or strings. Defining the contract as returning `Any` (or a `ConfigPayload` type alias) kept `BaseParser` strictly honest without forcing upstream assumptions.
 
-### 2. The Boundary Between Storage (I/O) and Domain Logic
-By strictly enforcing that `FileReader` returns raw `bytes` and `BaseParser` ingests `bytes`, I established a clear architectural invariant[cite: 1]. `FileReader` does not care if a file contains UTF-8, malformed JSON, or binary garbage[cite: 1]; its sole responsibility is bit retrieval[cite: 1]. The parser handles byte decoding and syntax evaluation.
+I learned the importance of avoiding leaked business assumptions in base interfaces.
 
-### 3. Defensive Security with `yaml.safe_load()`
-I gained a practical understanding of deserialization security. Using standard `yaml.load()` can introduce Remote Code Execution (RCE) vulnerabilities if a payload contains Python object tags (`!!python/object`). Enforcing `yaml.safe_load()` guarantees that untrusted input deserializes strictly into primitive Python types.
+JSON and YAML can represent root-level mappings, sequences, scalars, and null values. Therefore, the parser boundary should not assume every parsed document is a dictionary.
 
-### 4. Advanced `pytest` Testing Patterns
-* **Self-Contained Fixtures:** Using Pytest’s `tmp_path` fixture isolates tests from physical file dependencies, ensuring test suites are non-flaky, fast, and execution-environment agnostic.
-* **State Isolation with Yield Fixtures:** Creating restorative fixtures (`restore_parser_registry`) using snapshotting (`.copy()`) and the `yield` teardown pattern prevents class-level state leakages (like mutating `ParserFactory._registered_parsers`) across unit tests.
-* **Parametrization:** Using `@pytest.mark.parametrize` eliminates code duplication while testing edge-case variations (e.g., non-bytes input types or scalar parsing).
+### 2. The Boundary Between Storage and Domain Logic
 
----
+`FileReader` retrieves raw bytes. Parsers handle decoding and syntax evaluation.
+
+This separation means the reader does not need to understand JSON, YAML, UTF-8 semantics, or configuration policy.
+
+### 3. Defensive YAML Deserialization
+
+I learned why `yaml.safe_load()` is important when processing untrusted configuration input. YAML deserialization should not permit arbitrary Python object construction.
+
+### 4. Advanced pytest Patterns
+
+I practiced:
+
+- `tmp_path` for isolated filesystem tests.
+- Yield fixtures for restoring mutable parser-factory state.
+- `pytest.mark.parametrize` for boundary and type cases.
+- Focused tests followed by full-suite regression testing.
 
 ## What Challenged Me?
 
-* **Exception Translation & Context Preservation:** Designing a domain exception hierarchy required careful thought around inheritance. Catching standard library exceptions (`FileNotFoundError`, `UnicodeDecodeError`, `JSONDecodeError`, `yaml.YAMLError`) and re-raising them as structured domain errors (`ResourceNotFoundError`, `EncodingError`, `JSONSyntaxError`) using `from e` was crucial to keep higher-level orchestration code clean while preserving debugging tracebacks.
-* **DRY Exception Refactoring:** Refactoring duplicate `__init__` methods across exception subclasses into `ReaderError` required leveraging Python OOP properly to pass positional arguments (`resource`, `operation`, `message`) up to `super().__init__()`.
-
----
+- Translating low-level exceptions into domain-specific exceptions while preserving the original traceback.
+- Designing an exception hierarchy without duplicating common initialization logic.
+- Keeping reader responsibilities separate from parser responsibilities.
 
 ## What Mistakes Did I Make?
 
-1. **Code Duplication in Custom Exceptions:** In the initial draft of `reader_exceptions.py`, every subclass (`ResourceNotFoundError`, `AccessDeniedError`, `ResourceInvalidError`) duplicated identical attribute assignment and message formatting logic—even accidentally repeating `"File does not exist at..."` for permission errors.
-   * *Fix:* Pushed shared attributes (`self.resource`, `self.operation`) up to `ReaderError.__init__` and overridden standard messages gracefully.
-2. **Path Instantiation Outside `try` Block:** `path = Path(source)` sat outside the `try...except` block in `FileReader.read()`. If a caller passed an invalid type like `None`, it threw an unhandled standard `TypeError` instead of being caught and wrapped in a domain exception.
-   * *Fix:* Moved `Path(source)` inside the `try` block and mapped `TypeError` to `ResourceInvalidError`.
-3. **Hardcoding Physical Fixture Files:** My initial unit test for `FileReader` relied on a static physical file (`tests/resources/valid.txt`).
-   * *Fix:* Refactored to dynamic `tmp_path` setup/teardown.
-
----
+1. Duplicated exception initialization across subclasses.
+2. Created `Path(source)` outside the protected error-handling boundary.
+3. Initially relied on static physical fixture files.
 
 ## What Would I Improve?
 
-* **Binary Stream & Large File Handling:** `FileReader.read_bytes()` loads the entire file payload into memory at once. For Sprint 1 this works well, but for enterprise-scale or deeply nested files, I would consider supporting streaming byte chunks or context-managed buffer streams.
-* **Auto-Discovery for Parsers:** `ParserFactory` currently uses an explicit dictionary mapping (`_registered_parsers`). I could improve this by implementing dynamic auto-registration using module inspection or Python entry points so new parsers are registered automatically upon module import.
-* **Enhanced Diagnostic Metadata for YAML:** While `JSONSyntaxError` captures explicit `lineno` and `colno` from `json.JSONDecodeError`, `YAMLSyntaxError` currently extracts `str(e)`. Parsing PyYAML's `ProblemMark` object directly would allow capturing line/column metadata for YAML syntax errors as well.
+- Consider streaming or chunked handling for very large resources.
+- Consider more dynamic parser registration if the project later needs it.
+- Improve YAML diagnostic metadata by extracting line/column information from PyYAML's parser marks.
 
-## Sprint 2
+---
 
-What did I build?
+# Sprint 2 — Configuration Normalization
 
-What did I learn?
+## What Did I Build?
 
-What challenged me?
+Sprint 2 established `ConfigNormalizer` as the canonical boundary between parser output and security validation.
 
-What mistakes did I make?
+The completed work includes:
 
-What would I improve?
+- `BaseNormalizer` abstraction.
+- `ConfigNormalizer` implementation.
+- `ConfigurationInvalidError`.
+- Root-type validation.
+- Required `port` validation.
+- Canonical defaults.
+- Strict type/value validation.
+- Source-to-canonical alias resolution.
+- Ambiguity detection for conflicting representations.
+- `allow_users` validation and canonicalization.
+- Deep-copy immutability.
+- Unknown-field preservation.
+- JSON/YAML cross-format equivalence testing.
+- Full configuration integration testing.
+
+The current pipeline is:
+
+```text
+FileReader
+    ↓
+ParserFactory
+    ↓
+JsonParser / YamlParser
+    ↓
+Python object
+    ↓
+ConfigNormalizer
+    ↓
+Canonical configuration
+    ↓
+SecurityValidator (next)
+```
+
+## What Did I Learn?
+
+### 1. Normalization Is a Boundary, Not Just Formatting
+
+I learned that normalization should create a stable representation that downstream components can rely on.
+
+For example:
+
+```text
+listen_port
+Port
+ListenPort
+ssh_port
+```
+
+can all become:
+
+```text
+port
+```
+
+This means validation does not need to understand every source representation.
+
+### 2. Canonicalization Needs Explicit Conflict Rules
+
+A major design decision was that aliases cannot silently override one another.
+
+This is acceptable:
+
+```python
+{"port": 22, "listen_port": 22}
+```
+
+but this is ambiguous:
+
+```python
+{"port": 22, "listen_port": 2222}
+```
+
+The second case raises `ConfigurationInvalidError`.
+
+### 3. Strict Python Types Matter
+
+Python's type system has edge cases that matter for configuration security.
+
+For example:
+
+```python
+isinstance(True, int)
+```
+
+is `True`.
+
+Therefore, validating a port with `isinstance(port, int)` alone would incorrectly accept booleans.
+
+The implementation uses strict type checks where the contract requires them.
+
+### 4. Canonicalization Order Matters
+
+For `allow_users`, the order is:
+
+```text
+type validation
+    ↓
+blank validation
+    ↓
+trim
+    ↓
+deduplicate
+```
+
+This means:
+
+```python
+["  admin  ", "admin"]
+```
+
+correctly becomes:
+
+```python
+["admin"]
+```
+
+### 5. Unknown Data and Security Policy Are Different Concerns
+
+Unknown configuration fields are currently preserved.
+
+I learned that preserving an unknown field is different from deciding whether that field is secure.
+
+The normalizer should establish representation; the future `SecurityValidator` should evaluate security policy.
+
+### 6. Integration Tests Should Verify Architectural Contracts
+
+N-044 verifies that equivalent JSON and YAML inputs converge to the same canonical representation.
+
+N-046 verifies that aliases, defaults, validation, canonicalization, and unknown-field preservation work together in a realistic configuration.
+
+## What Challenged Me?
+
+### 1. Evolving the Contract Without Breaking Earlier Tests
+
+The original structural tests expected mappings to pass through unchanged. Once `port` became a required canonical field, those tests represented an outdated contract.
+
+The correct response was to update the tests so they reflect the new component boundary rather than weakening the new implementation.
+
+### 2. Designing Alias Ambiguity
+
+The initial implementation gave the canonical key implicit precedence over aliases. That was convenient but unsafe because contradictory configuration could be silently ignored.
+
+The contract was changed so conflicting representations raise an error.
+
+### 3. Keeping Mutable Defaults Safe
+
+`allow_users` defaults to an empty list. The implementation must ensure that one normalization does not share mutable list state with another normalization.
+
+Deep copying and constructing independent default state are important safeguards.
+
+### 4. Building the Test Backlog as a Development Tool
+
+The N-series backlog evolved from broad structural tests into a detailed canonicalization contract.
+
+This made the backlog useful as both a testing plan and a record of design decisions.
+
+## What Mistakes Did I Make?
+
+1. Initially returned the raw payload without enforcing the new canonical schema.
+2. Initially allowed canonical fields to silently coexist with conflicting aliases.
+3. Added schema expectations before updating older structural tests to reflect the new contract.
+4. Had to distinguish carefully between an alias with the same value and an alias with a conflicting value.
+
+## What Would I Improve?
+
+- Centralize field definitions, aliases, defaults, and validation metadata if the schema grows substantially.
+- Consider dedicated value objects or typed models if the canonical configuration becomes more complex.
+- Add stronger integration coverage once `SecurityValidator` exists.
+- Keep security-policy decisions outside the normalizer.
+
+---
+
+# Sprint 2 Outcome
+
+Sprint 2 is complete through N-046.
+
+The resulting boundary is:
+
+```text
+Parser output
+     ↓
+ConfigNormalizer
+     ↓
+stable canonical configuration
+     ↓
+SecurityValidator
+```
+
+The next learning phase is to design and implement `SecurityValidator` without allowing policy logic to leak back into the parser or normalizer.
